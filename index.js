@@ -6,7 +6,19 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// 明確允許 Vercel 的前端網址
+const allowedOrigins = ['https://my-frontend-ashy.vercel.app'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('不允許的來源：' + origin));
+    }
+  }
+}));
+
 app.use(express.json());
 
 const client = new MongoClient(process.env.MONGO_URI);
