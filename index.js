@@ -1,14 +1,16 @@
-const express = require('express');
-const cors = require('cors');
-const { MongoClient } = require('mongodb');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const client = new MongoClient(process.env.MONGO_URI);
-const dbName = 'warehouse'; // 資料庫名稱
+const dbName = 'sample_mflix'; // 資料庫名稱
 let db;
 
 app.post('/login', async (req, res) => {
@@ -29,7 +31,9 @@ async function startServer() {
   try {
     await client.connect();
     db = client.db(dbName);
-    app.listen(3000, () => console.log('API server on http://localhost:3000'));
+    app.listen(3000, () =>
+      console.log('API server on http://localhost:3000')
+    );
   } catch (e) {
     console.error('MongoDB 連線失敗', e);
   }
