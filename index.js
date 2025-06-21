@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 
 // 明確允許 Vercel 的前端網址
-const allowedOrigins = ['https://my-frontend-ashy.vercel.app'];
+const allowedOrigins = ['https://my-frontend-yuan.vercel.app'];
 
 app.use(cors({
   origin: function (origin, callback) {
