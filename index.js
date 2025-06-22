@@ -70,3 +70,20 @@ app.get('/api/products', async (req, res) => {
     res.status(500).json({ success: false, message: '伺服器錯誤，取得 products 失敗' });
   }
 });
+
+app.post('/api/inventory/by-products', async (req, res) => {
+  const { productCodes } = req.body;
+  
+  if (!Array.isArray(productCodes)) {
+    return res.status(400).json({ error: '請提供 productCodes 陣列' });
+  }
+  
+  try {
+    const inventory = await db.collection('inventory');
+      .find({ productCode: { $in: productCodes } })
+      .toArray();
+    res.json(inventory);
+  } catch (err) {
+    res.status(500).json({ success: false, message: '伺服器錯誤，取得 inventory  失敗' });
+  }
+});
