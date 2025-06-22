@@ -74,12 +74,11 @@ app.get('/api/products', async (req, res) => {
 app.post('/api/inventory/by-products', async (req, res) => {
   const { productCodes } = req.body;
   
-  if (!Array.isArray(productCodes)) {
-    return res.status(400).json({ error: '請提供 productCodes 陣列' });
-  }
-  
   try {
-    const inventory = await db.collection('inventory');
+	if (!Array.isArray(productCodes)) {
+      return res.status(400).json({ error: '請提供 productCodes 陣列' });
+	}
+    const inventory = await db.collection('inventory')
       .find({ productCode: { $in: productCodes } })
       .toArray();
     res.json(inventory);
