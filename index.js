@@ -56,18 +56,28 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.get('/api/products', async (req, res) => {
-  const limit = parseInt(req.query.limit) || 20;
+app.post('/api/products/page', async (req, res) => {
+  const { page = 1, pageSize = 1 } = req.body; // 預設值,防undefined
   
   try {
+	const skip = (page - 1) * pageSize;
+	
+	const totalCount = await db.collection('products').countDocuments();
+	
     const products = await db.collection('products')
       .find()
 	  .sort({ client: 1, productCode: 1 })  // 排序依據
-	  .limit(limit)
+	  .skip(skip)
+	  .limit(pageSize)
 	  .toArray();
-	res.json(products);
+	  
+	res.json({
+	  products,
+	  totalPages: Math.ceil(totalCount / pageSize),
+	  currentPage: page
+	});
   } catch (err) {
-    res.status(500).json({ success: false, message: '伺服器錯誤，取得 products 失敗' });
+    res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品分頁失敗' });
   }
 });
 
@@ -83,6 +93,6 @@ app.post('/api/inventory/by-products', async (req, res) => {
       .toArray();
     res.json(inventory);
   } catch (err) {
-    res.status(500).json({ success: false, message: '伺服器錯誤，取得 inventory  失敗' });
+    res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品資料失敗' });
   }
 });
