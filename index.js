@@ -57,15 +57,20 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/api/products/page', async (req, res) => {
-  const { page = 1, pageSize = 1 } = req.body; // 預設值,防undefined
+  const { page = 1, pageSize = 1, keyword = '' } = req.body; // 預設值,防undefined
   
   try {
 	const skip = (page - 1) * pageSize;
 	
+	// 模糊查詢條件：以商品名稱為主
+    const query = keyword.trim()
+      ? { productNameZh: { $regex: keyword, $options: 'i' } }  // i = 忽略大小寫
+      : {};
+	// 取得總筆數
 	const totalCount = await db.collection('products').countDocuments();
-	
+	// 查詢分頁商品
     const products = await db.collection('products')
-      .find()
+      .find(query)
 	  .sort({ client: 1, productCode: 1 })  // 排序依據
 	  .skip(skip)
 	  .limit(pageSize)
