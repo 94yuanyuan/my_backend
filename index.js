@@ -75,7 +75,7 @@ app.post('/api/products/page', async (req, res) => {
     if (dtAt in dtMap) {
       const daysAgo = dtMap[dtAt];
       dateFilter = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-    }
+    } console.log('dateFilter:', dateFilter);
 	
 	// Step 2: 組合查詢條件（模糊查詢 + 日期條件）
     const query = {};
