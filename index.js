@@ -57,21 +57,43 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/api/products/page', async (req, res) => {
-  const { page = 1, pageSize = 1, keyword = '' } = req.body; // 預設值,防undefined
+  const { page = 1, pageSize = 1, keyword = '', DtAt = 0 } = req.body; // 預設值,防undefined
   
   try {
 	const skip = (page - 1) * pageSize;
 	
-	// 模糊查詢條件：以商品名稱為主
-    const query = keyword.trim()
-      ? { productNameZh: { $regex: keyword, $options: 'i' } }  // i = 忽略大小寫
-      : {};
-	// 取得總筆數
-	const totalCount = await db.collection('products').countDocuments();
+    // Step 1: 計算 DtAt 對應的日期
+    let dateFilter = null;
+    const now = new Date();
+    const dtMap = {
+      1: 1,   		// 1 天
+      7: 7,   		// 1 週
+      30: 30, 		// 1 月
+      365: 365		// 1 年
+    };
+	
+    if (DtAt in dtMap) {
+      const daysAgo = dtMap[DtAt];
+      dateFilter = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    }
+	
+	// Step 2: 組合查詢條件（模糊查詢 + 日期條件）
+    const query = {};
+	
+    if (keyword.trim()) {
+      query.productNameZh = { $regex: keyword.trim(), $options: 'i' };
+    }
+
+    if (dateFilter) {
+      query.updateAt = { $gte: dateFilter };
+    }
+	// Step 3: 查詢資料
+	const totalCount = await db.collection('products').countDocuments(query);
+	
 	// 查詢分頁商品
     const products = await db.collection('products')
       .find(query)
-	  .sort({ client: 1, productCode: 1 })  // 排序依據
+	  .sort({ client: 1, productCode: 1 }) // 排序依據
 	  .skip(skip)
 	  .limit(pageSize)
 	  .toArray();
@@ -81,6 +103,7 @@ app.post('/api/products/page', async (req, res) => {
 	  totalPages: Math.ceil(totalCount / pageSize),
 	  currentPage: page
 	});
+	
   } catch (err) {
     res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品分頁失敗' });
   }
