@@ -57,12 +57,12 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/api/products/page', async (req, res) => {
-  const { page = 1, pageSize = 1, keyword = '', DtAt = 0 } = req.body; // 預設值,防undefined
+  const { page = 1, pageSize = 1, keyword = '', dtAt = 0 } = req.body; // 預設值,防undefined
   
   try {
 	const skip = (page - 1) * pageSize;
 	
-    // Step 1: 計算 DtAt 對應的日期
+    // Step 1: 計算 dtAt 對應的日期
     let dateFilter = null;
     const now = new Date();
     const dtMap = {
@@ -72,8 +72,8 @@ app.post('/api/products/page', async (req, res) => {
       365: 365		// 1 年
     };
 	
-    if (DtAt in dtMap) {
-      const daysAgo = dtMap[DtAt];
+    if (dtAt in dtMap) {
+      const daysAgo = dtMap[dtAt];
       dateFilter = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
     }
 	
