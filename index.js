@@ -118,9 +118,17 @@ app.post('/api/inventory/by-products', async (req, res) => {
       return res.status(400).json({ error: '請提供 productCodes 陣列' });
 	}
 	
-    const products = await db.collection('products').aggregate([
+    const result = await db.collection('products').aggregate([
       {
         $match: { productCode: { $in: productCodes } }
+      },
+      {
+        $lookup: {
+          from: 'inventory',
+          localField: 'productCode',
+          foreignField: 'productCode',
+          as: 'inventory'
+        }
       },
       {
         $lookup: {
@@ -137,12 +145,12 @@ app.post('/api/inventory/by-products', async (req, res) => {
       },
       {
         $project: {
-          vendor: 0 // 不需要整個 vendor，只留下 vendorName
+          vendor: 0 // 不需要整包 vendor 資料，只留 vendorName
         }
       }
     ]).toArray();
 
-    res.json(products);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品資料失敗' });
   }
