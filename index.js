@@ -57,71 +57,34 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/api/products/page', async (req, res) => {
-  const { page = 1, pageSize = 1, keyword = '', dtAt = 0 } = req.body; // 預設值,防undefined
-  
+  const { page = 1, pageSize = 5, keyword = '', dtAt = 0 } = req.body;
   try {
-	const skip = (page - 1) * pageSize;
-	
-    // Step 1: 計算 dtAt 對應的日期
+    const skip = (page - 1) * pageSize;
+
+    // 日期條件處理
+    const dtMap = { 1: 1, 7: 7, 30: 30, 365: 365 };
     let dateFilter = null;
-    const now = new Date();
-    const dtMap = {
-      1: 1,   		// 1 天
-      7: 7,   		// 1 週
-      30: 30, 		// 1 月
-      365: 365		// 1 年
-    };
-	
     if (dtAt in dtMap) {
-      const daysAgo = dtMap[dtAt];
-      dateFilter = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      dateFilter = new Date(Date.now() - dtMap[dtAt] * 24 * 60 * 60 * 1000);
     }
-	console.log('dateFilter:', dateFilter);
-	
-	// Step 2: 組合查詢條件（模糊查詢 + 日期條件）
+
+    // 查詢條件組合
     const query = {};
-	
     if (keyword.trim()) {
       query.productNameZh = { $regex: keyword.trim(), $options: 'i' };
     }
-
     if (dateFilter) {
       query.updateAt = { $gte: dateFilter };
     }
-	// Step 3: 查詢資料
-	const totalCount = await db.collection('products').countDocuments(query);
-	
-	// 查詢分頁商品
-    const products = await db.collection('products')
-      .find(query)
-	  .sort({ client: 1, productCode: 1 }) // 排序依據
-	  .skip(skip)
-	  .limit(pageSize)
-	  .toArray();
-	  
-	res.json({
-	  products,
-	  totalPages: Math.ceil(totalCount / pageSize),
-	  currentPage: page
-	});
-	
-  } catch (err) {
-    res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品分頁失敗' });
-  }
-});
 
-app.post('/api/inventory/by-products', async (req, res) => {
-  const { productCodes } = req.body;
-  
-  try {
-	if (!Array.isArray(productCodes)) {
-      return res.status(400).json({ error: '請提供 productCodes 陣列' });
-	}
-	
-    const result = await db.collection('products').aggregate([
-      {
-        $match: { productCode: { $in: productCodes } }
-      },
+    const totalCount = await db.collection('products').countDocuments(query);
+
+    // 主要 aggregate 查詢
+    const products = await db.collection('products').aggregate([
+      { $match: query },
+      { $sort: { client: 1, productCode: 1 } },
+      { $skip: skip },
+      { $limit: pageSize },
       {
         $lookup: {
           from: 'inventory',
@@ -140,18 +103,33 @@ app.post('/api/inventory/by-products', async (req, res) => {
       },
       {
         $addFields: {
-          vendorName: { $arrayElemAt: ['$vendor.vendorName', 0] }
+          vendorName: { $arrayElemAt: ['$vendor.vendorName', 0] },
+          stockByWarehouse: {
+            $map: {
+              input: '$inventory',
+              as: 'inv',
+              in: { warehouse: '$$inv.warehouse', quantity: '$$inv.quantity' }
+            }
+          },
+          totalStock: { $sum: '$inventory.quantity' }
         }
       },
       {
         $project: {
-          vendor: 0 // 不需要整包 vendor 資料，只留 vendorName
+          vendor: 0,
+          inventory: 0 // 避免回傳多餘欄位
         }
       }
     ]).toArray();
 
-    res.json(result);
+    res.json({
+      products,
+      totalPages: Math.ceil(totalCount / pageSize),
+      currentPage: page
+    });
+
   } catch (err) {
-    res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品資料失敗' });
+    console.error(err);
+    res.status(500).json({ success: false, message: '查詢商品資料失敗' });
   }
 });
