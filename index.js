@@ -58,6 +58,7 @@ app.post('/login', async (req, res) => {
 
 app.post('/api/products/page', async (req, res) => {
   const { page = 1, pageSize = 5, keyword = '', dtAt = 0 } = req.body;
+  
   try {
     const skip = (page - 1) * pageSize;
 
@@ -131,5 +132,18 @@ app.post('/api/products/page', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: '查詢商品資料失敗' });
+  }
+});
+
+app.post('/api/vendors', async (req, res) => {
+  try {
+	const vendors = await db.collection('vendors')
+	  .find({}, { projection: { _id: 0, vendorCode: 1, vendorName: 1 } })
+      .toArray();
+	
+    res.json({ vendors });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: '查詢廠商資料失敗' });
   }
 });
