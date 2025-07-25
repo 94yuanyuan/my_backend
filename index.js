@@ -75,7 +75,8 @@ app.post('/api/products/page', async (req, res) => {
     if (dtAt in dtMap) {
       const daysAgo = dtMap[dtAt];
       dateFilter = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-    } console.log('dateFilter:', dateFilter);
+    }
+	console.log('dateFilter:', dateFilter);
 	
 	// Step 2: 組合查詢條件（模糊查詢 + 日期條件）
     const query = {};
@@ -116,10 +117,32 @@ app.post('/api/inventory/by-products', async (req, res) => {
 	if (!Array.isArray(productCodes)) {
       return res.status(400).json({ error: '請提供 productCodes 陣列' });
 	}
-    const inventory = await db.collection('inventory')
-      .find({ productCode: { $in: productCodes } })
-      .toArray();
-    res.json(inventory);
+	
+    const products = await db.collection('products').aggregate([
+      {
+        $match: { productCode: { $in: productCodes } }
+      },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendorCode',
+          foreignField: 'vendorCode',
+          as: 'vendor'
+        }
+      },
+      {
+        $addFields: {
+          vendorName: { $arrayElemAt: ['$vendor.vendorName', 0] }
+        }
+      },
+      {
+        $project: {
+          vendor: 0 // 不需要整個 vendor，只留下 vendorName
+        }
+      }
+    ]).toArray();
+
+    res.json(products);
   } catch (err) {
     res.status(500).json({ success: false, message: '伺服器錯誤，查詢商品資料失敗' });
   }
