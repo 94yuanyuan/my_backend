@@ -77,22 +77,11 @@ app.post('/api/products/page', async (req, res) => {
     if (dateFilter) {
       query.updateAt = { $gte: dateFilter };
     }
+    if (vendor.trim()) {
+      query.vendorCode = { $regex: vendor.trim(), $options: 'i' };
+    }
 
-    const countResult = await db.collection('products').aggregate([
-	  { $match: query },
-	  {
-	  	$lookup: {
-		  from: 'vendors',
-		  localField: 'vendorCode',
-		  foreignField: 'vendorCode',
-		  as: 'vendor'
-	  	}
-	  },
-	  { $match: { 'vendor.vendorName': vendor } },
-	  { $count: "totalCount" }
-	]).toArray();
-	  
-	const totalCount = countResult[0]?.totalCount || 0;
+    const totalCount = await db.collection('products').countDocuments(query);
 
     // 主要 aggregate 查詢
     const products = await db.collection('products').aggregate([
@@ -116,11 +105,6 @@ app.post('/api/products/page', async (req, res) => {
           as: 'vendor'
         }
       },
-	  {
-		$match: {
-		  'vendor.vendorName': vendor
-		}
-	  },
       {
         $addFields: {
           vendorName: { $arrayElemAt: ['$vendor.vendorName', 0] },
