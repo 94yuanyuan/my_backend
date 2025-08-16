@@ -57,7 +57,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/api/products/page', async (req, res) => {
-  const { page = 1, pageSize = 5, keyword = '', dtAt = 0 } = req.body;
+  const { page = 1, pageSize = 5, keyword = '', dtAt = 0, vendor = '' } = req.body;
   
   try {
     const skip = (page - 1) * pageSize;
@@ -76,6 +76,9 @@ app.post('/api/products/page', async (req, res) => {
     }
     if (dateFilter) {
       query.updateAt = { $gte: dateFilter };
+    }
+    if (vendor.trim()) {
+      query.vendorName = { $regex: vendor.trim(), $options: 'i' };
     }
 
     const totalCount = await db.collection('products').countDocuments(query);
