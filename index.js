@@ -135,7 +135,7 @@ app.post('/api/products/page', async (req, res) => {
   }
 });
 
-app.post('/api/vendors', async (req, res) => {
+app.get('/api/vendors', async (req, res) => {
   try {
 	const vendors = await db.collection('vendors')
 	  .find({}, { projection: { _id: 0, vendorCode: 1, vendorName: 1 } })
